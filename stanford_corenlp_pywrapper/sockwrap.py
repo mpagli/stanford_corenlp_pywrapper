@@ -266,7 +266,7 @@ class CoreNLP:
             sock.sendall(cmd + "\n")
             size_info_str = sock.recv(8)
         elif self.comm_mode == 'PIPE':
-            self.proc.stdin.write(bytes(cmd + "\n", 'UTF-8')))
+            self.proc.stdin.write(bytes(cmd + "\n", 'UTF-8'))
             self.proc.stdin.flush()
             size_info_str = self.outpipe_fp.read(8)
 
