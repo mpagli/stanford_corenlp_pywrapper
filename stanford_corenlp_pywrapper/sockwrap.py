@@ -178,7 +178,7 @@ class CoreNLP:
             sock = self.get_socket(num_retries=100, retry_interval=STARTUP_BUSY_WAIT_INTERVAL_SEC)
             sock.close()
         elif self.comm_mode=='PIPE':
-            self.outpipe_fp = open(self.outpipe, 'r')
+            self.outpipe_fp = open(self.outpipe, 'r', encoding='utf-8')
 
         while True:
             # This loop is for if you have timeouts for the socket connection
