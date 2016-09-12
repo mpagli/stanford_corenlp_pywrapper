@@ -178,7 +178,7 @@ class CoreNLP:
             sock = self.get_socket(num_retries=100, retry_interval=STARTUP_BUSY_WAIT_INTERVAL_SEC)
             sock.close()
         elif self.comm_mode=='PIPE':
-            self.outpipe_fp = open(self.outpipe, 'r', encoding='utf-8')
+            self.outpipe_fp = open(self.outpipe, 'r')
 
         while True:
             # This loop is for if you have timeouts for the socket connection
@@ -266,13 +266,13 @@ class CoreNLP:
             sock.sendall(cmd + "\n")
             size_info_str = sock.recv(8)
         elif self.comm_mode == 'PIPE':
-            self.proc.stdin.write(bytes(cmd + "\n", 'UTF-8'))
+            self.proc.stdin.write(bytes(cmd + "\n"))
             self.proc.stdin.flush()
             size_info_str = self.outpipe_fp.read(8)
 
         # java "long" is 8 bytes, which python struct calls "long long".
         # java default byte ordering is big-endian.
-        size_info = struct.unpack('>Q', bytes(size_info_str, 'UTF-8'))[0]
+        size_info = struct.unpack('>Q', bytes(size_info_str))[0]
         # print "size expected", size_info
 
         chunks = []
