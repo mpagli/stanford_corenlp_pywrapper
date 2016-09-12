@@ -272,7 +272,7 @@ class CoreNLP:
 
         # java "long" is 8 bytes, which python struct calls "long long".
         # java default byte ordering is big-endian.
-        size_info = struct.unpack('>Q', size_info_str)[0]
+        size_info = struct.unpack('>Q', bytes(size_info_str, 'UTF-8'))[0]
         # print "size expected", size_info
 
         chunks = []
