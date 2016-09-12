@@ -1,1 +1,1 @@
-from sockwrap import *
+from .sockwrap import *
