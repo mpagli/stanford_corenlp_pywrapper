@@ -74,7 +74,7 @@ def command(mode=None, configfile=None, configdict=None, comm_mode=None,
     else: assert False, "need comm_mode to be SOCKET or PIPE but got " + repr(comm_mode)
 
 
-    cmd = """exec {java_command} {java_options} -cp '{classpath}' 
+    cmd = """exec {java_command} {java_options} -cp '{classpath}'
     corenlp.SocketServer {comm_info} {more_config}"""
     return cmd.format(**d).replace("\n", " ")
 
@@ -85,7 +85,7 @@ class SubprocessCrashed(Exception):
 
 class CoreNLP:
 
-    def __init__(self, mode=None, 
+    def __init__(self, mode=None,
             configfile=None, configdict=None,
             corenlp_jars=(
                 "/home/sw/corenlp/stanford-corenlp-full-2015-04-20/*",
@@ -168,7 +168,7 @@ class CoreNLP:
         if self.comm_mode=='PIPE':
             if not os.path.exists(self.outpipe):
                 os.mkfifo(self.outpipe)
-        
+
         cmd = command(**self.__dict__)
         LOG.info("Starting java subprocess, and waiting for signal it's ready, with command: %s" % cmd)
         self.proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
@@ -178,7 +178,7 @@ class CoreNLP:
             sock = self.get_socket(num_retries=100, retry_interval=STARTUP_BUSY_WAIT_INTERVAL_SEC)
             sock.close()
         elif self.comm_mode=='PIPE':
-            self.outpipe_fp = open(self.outpipe, 'r', encoding='iso-8859-1')
+            self.outpipe_fp = open(self.outpipe, 'rb')
 
         while True:
             # This loop is for if you have timeouts for the socket connection
@@ -240,6 +240,7 @@ class CoreNLP:
         try:
             self.ensure_proc_is_running()
             data = self.send_command_and_get_string_result(cmd, timeout)
+            #print("got a string of length", len(data))
             if data is None: return None
             decoded = None
             if raw:
@@ -247,6 +248,7 @@ class CoreNLP:
             try:
                 decoded = json.loads(data)
             except ValueError:
+                #print("BAD JSON", data)
                 LOG.warning("Bad JSON returned from subprocess; returning null.")
                 LOG.warning("Bad JSON length %d, starts with: %s" % (len(data), repr(data[:1000])))
                 return None
@@ -263,18 +265,18 @@ class CoreNLP:
         if self.comm_mode == 'SOCKET':
             sock = self.get_socket(num_retries=100)
             sock.settimeout(timeout)
-            sock.sendall(cmd + "\n")
+            sock.sendall(bytes(cmd + "\n", 'iso-8859-1'))
             size_info_str = sock.recv(8)
         elif self.comm_mode == 'PIPE':
             self.proc.stdin.write(bytes(cmd + "\n", 'iso-8859-1'))
             self.proc.stdin.flush()
             size_info_str = self.outpipe_fp.read(8)
-
+        #print("\ncommand", cmd)
         # java "long" is 8 bytes, which python struct calls "long long".
         # java default byte ordering is big-endian.
-        size_info = struct.unpack('>Q', bytes(size_info_str, 'iso-8859-1'))[0]
+        size_info = struct.unpack('>Q',size_info_str)[0]
         # print "size expected", size_info
-
+        #print("size info string", size_info_str, size_info)
         chunks = []
         curlen = lambda: sum(len(x) for x in chunks)
         while True:
@@ -282,8 +284,11 @@ class CoreNLP:
             if self.comm_mode == 'SOCKET':
                 data = sock.recv(remaining_size)
             elif self.comm_mode == 'PIPE':
+                #print(remaining_size, size_info)
+                #print(size_info_str, cmd)
                 data = self.outpipe_fp.read(remaining_size)
-            chunks.append(data)
+            chunks.append(data.decode('iso-8859-1'))
+            #print("curlen", curlen(), size_info)
             if curlen() >= size_info: break
             if len(chunks) > 1000:
                 LOG.warning("Incomplete value from server")
